@@ -69,6 +69,15 @@ class Detect(nn.Module):
 
         return x if self.training else (torch.cat(z, 1), x)
 
+    def forward_export(self, x):
+        """
+        support rknn export, view https://github.com/airockchip/rknn_model_zoo/tree/main/models/vision/object_detection/yolov5-pytorch for detail
+        """
+        for i in range(self.nl):
+            x[i] = self.m[i](x[i])  # conv
+
+        return x
+
     def _make_grid(self, nx=20, ny=20, i=0):
         d = self.anchors[i].device
         if check_version(torch.__version__, '1.10.0'):  # torch>=1.10.0 meshgrid workaround for torch>=0.7 compatibility
