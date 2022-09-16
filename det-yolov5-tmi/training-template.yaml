@@ -15,7 +15,7 @@ num_workers_per_gpu: 8
 epochs: 300
 img_size: 640
 opset: 12
-activation: relu
+activation: silu
 args_options: '--exist-ok'
 save_period: 10
 sync_bn: False # work for multi-gpu only
