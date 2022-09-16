@@ -49,6 +49,8 @@ class Conv(nn.Module):
         else:
             if activation.lower() == 'relu':
                 custom_act = nn.ReLU()
+            elif activation.lower() == 'silu':
+                custom_act = nn.SiLU()
             else:
                 warnings.warn(f'unknown activation {activation}, use Hardswish instead')
                 custom_act = nn.Hardswish()
@@ -132,6 +134,8 @@ class BottleneckCSP(nn.Module):
         else:
             if activation.lower() == 'relu':
                 self.act = nn.ReLU()
+            elif activation.lower() == 'silu':
+                self.act = nn.SiLU()
             else:
                 warnings.warn(f'unknown activation {activation}, use SiLU instead')
                 self.act = nn.SiLU()

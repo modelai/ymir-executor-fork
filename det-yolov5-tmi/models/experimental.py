@@ -74,6 +74,8 @@ class MixConv2d(nn.Module):
         else:
             if activation.lower() == 'relu':
                 self.act = nn.ReLU()
+            elif activation.lower() == 'silu':
+                self.act = nn.SiLU()
             else:
                 warnings.warn(f'unknown activation {activation}, use SiLU instead')
                 self.act = nn.SiLU()

@@ -14,7 +14,8 @@ batch_size_per_gpu: 16
 num_workers_per_gpu: 8
 epochs: 300
 img_size: 640
-opset: 11
+opset: 12
+activation: relu
 args_options: '--exist-ok'
 save_period: 10
 sync_bn: False # work for multi-gpu only
