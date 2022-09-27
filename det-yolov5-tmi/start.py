@@ -1,7 +1,11 @@
+import json
 import logging
 import os
+import os.path as osp
+import shutil
 import subprocess
 import sys
+from typing import Dict, List
 
 import cv2
 from easydict import EasyDict as edict
@@ -107,7 +111,43 @@ def _run_training(cfg: edict) -> None:
     logging.info(f'export onnx weight: {command}')
     subprocess.run(command.split(), check=True)
 
-    write_ymir_training_result(cfg, map50=0, files=[], id='last')
+    # 4. add attachments for quantification
+    attachments: Dict[str, List[str]] = dict()
+    attachments['images'] = []
+    attachments['configs'] = []
+    with open(cfg.ymir.input.val_index_file, 'r') as fp:
+        img_files = [line.split()[0] for line in fp.readlines()]
+
+    attachments_image_dir = 'attachments/images'
+    os.makedirs(attachments_image_dir, exist_ok=True)
+    for img_f in img_files[0:200]:
+        shutil.copy(img_f, attachments_image_dir)
+        attachments['images'].append(osp.join(attachments_image_dir, osp.basename(img_f)))
+
+    attachments_config_dir = 'attachments/configs'
+    os.makedirs(attachments_config_dir, exist_ok=True)
+    for config_f in ['preconfig.json', 'postconfig.json']:
+        with open(config_f, 'r') as fp:
+            quant_config = json.load(fp)
+
+        if config_f == 'preconfig.json':
+            quant_config['inputs']['dims'] = [1, 3, img_size, img_size]
+        else:
+            from models.experimental import attempt_load  # scoped to avoid circular import
+            quant_model = attempt_load(f'{models_dir}/best.pt', map_location='cpu')
+            anchors = quant_model.model[-1].anchors * quant_model.stride.view(-1, 1, 1)
+            np_anchors = anchors.data.cpu().numpy().reshape(3, -1).astype(int)
+            quant_config['anchor0'] = np_anchors[0].tolist()
+            quant_config['anchor0'] = np_anchors[1].tolist()
+            quant_config['anchor0'] = np_anchors[2].tolist()
+
+        out_config_f = osp.join(attachments_config_dir, config_f)
+        with open(out_config_f, 'w') as fw:
+            json.dump(quant_config, fw)
+
+        attachments['configs'].append(out_config_f)
+
+    write_ymir_training_result(cfg, map50=0, files=[], id='last', attachments=attachments)
     # if task done, write 100% percent log
     monitor.write_monitor_logger(percent=1.0)
 
