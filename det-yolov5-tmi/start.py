@@ -1,11 +1,7 @@
-import json
 import logging
 import os
-import os.path as osp
-import shutil
 import subprocess
 import sys
-from typing import Dict, List
 
 import cv2
 from easydict import EasyDict as edict
@@ -14,8 +10,7 @@ from utils.ymir_yolov5 import YmirYolov5, convert_ymir_to_yolov5, get_weight_fil
 from ymir_exc import dataset_reader as dr
 from ymir_exc import env, monitor
 from ymir_exc import result_writer as rw
-from ymir_exc.util import (YmirStage, find_free_port, get_bool, get_merged_config, get_ymir_process,
-                           write_ymir_training_result)
+from ymir_exc.util import YmirStage, find_free_port, get_bool, get_merged_config, get_ymir_process
 
 
 def start(cfg: edict) -> int:
@@ -61,7 +56,7 @@ def _run_training(cfg: edict) -> None:
     num_workers_per_gpu: int = int(cfg.param.get('num_workers_per_gpu', 8))
     model: str = cfg.param.model
     img_size: int = int(cfg.param.img_size)
-    save_period: int = max(1, min(epochs // 10, int(cfg.param.save_period)))
+    save_period: int = min(max(1, epochs // 10), int(cfg.param.save_period))
     args_options: str = cfg.param.args_options
     gpu_id: str = str(cfg.param.get('gpu_id', '0'))
     gpu_count: int = len(gpu_id.split(',')) if gpu_id else 0
@@ -94,6 +89,9 @@ def _run_training(cfg: edict) -> None:
         str(num_workers_per_gpu)
     ])
 
+    if save_period <= 0:
+        commands.append("--nosave")
+
     if gpu_count > 1 and sync_bn:
         commands.append("--sync-bn")
 
@@ -111,44 +109,6 @@ def _run_training(cfg: edict) -> None:
     logging.info(f'export onnx weight: {command}')
     subprocess.run(command.split(), check=True)
 
-    # 4. add attachments for quantification
-    attachments: Dict[str, List[str]] = dict()
-    attachments['images'] = []
-    attachments['configs'] = []
-    with open(cfg.ymir.input.val_index_file, 'r') as fp:
-        img_files = [line.split()[0] for line in fp.readlines()]
-
-    attachments_image_dir = osp.join(models_dir, 'attachments/images')
-    os.makedirs(attachments_image_dir, exist_ok=True)
-    for img_f in img_files[0:200]:
-        shutil.copy(img_f, attachments_image_dir)
-        attachments['images'].append(osp.basename(img_f))
-
-    attachments_config_dir = osp.join(models_dir, 'attachments/configs')
-    os.makedirs(attachments_config_dir, exist_ok=True)
-    for config_f in ['preconfig.json', 'postconfig.json']:
-        with open(config_f, 'r') as fp:
-            quant_config = json.load(fp)
-
-        if config_f == 'preconfig.json':
-            quant_config['inputs'][0]['dims'] = [1, 3, img_size, img_size]
-        else:
-            from models.experimental import attempt_load  # scoped to avoid circular import
-            quant_model = attempt_load(f'{models_dir}/best.pt', map_location='cpu')
-            anchors = quant_model.model[-1].anchors * quant_model.stride.view(-1, 1, 1)
-            np_anchors = anchors.data.cpu().numpy().reshape(3, -1).astype(int)
-            quant_config['anchor0'] = np_anchors[0].tolist()
-            quant_config['anchor0'] = np_anchors[1].tolist()
-            quant_config['anchor0'] = np_anchors[2].tolist()
-
-        out_config_f = osp.join(attachments_config_dir, config_f)
-        with open(out_config_f, 'w') as fw:
-            json.dump(quant_config, fw)
-
-        # save to yaml with relative path to mdoels_dir
-        attachments['configs'].append(osp.basename(config_f))
-
-    write_ymir_training_result(cfg, map50=0, files=[], id='last', attachments=attachments)
     # if task done, write 100% percent log
     monitor.write_monitor_logger(percent=1.0)
 

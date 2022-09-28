@@ -467,7 +467,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     torch.cuda.empty_cache()
     # save the best and last weight file with other files in models_dir
     if RANK in [-1, 0]:
-        write_ymir_training_result(ymir_cfg, map50=best_fitness, id=f'epoch_{epochs}', files=[])
+        write_ymir_training_result(ymir_cfg, map50=best_fitness, id='best', files=['best.onnx'])
     return results
 
 
