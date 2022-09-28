@@ -90,8 +90,8 @@ def _run_training(cfg: edict) -> None:
         str(batch_size), '--data', f'{out_dir}/data.yaml', '--project', project, '--cfg', f'models/{model}.yaml',
         '--name', name, '--weights', weights, '--img-size',
         str(img_size), '--save-period',
-        str(save_period), '--device', device,
-        '--workers', str(num_workers_per_gpu)
+        str(save_period), '--device', device, '--workers',
+        str(num_workers_per_gpu)
     ])
 
     if gpu_count > 1 and sync_bn:
@@ -118,20 +118,20 @@ def _run_training(cfg: edict) -> None:
     with open(cfg.ymir.input.val_index_file, 'r') as fp:
         img_files = [line.split()[0] for line in fp.readlines()]
 
-    attachments_image_dir = 'attachments/images'
+    attachments_image_dir = osp.join(models_dir, 'attachments/images')
     os.makedirs(attachments_image_dir, exist_ok=True)
     for img_f in img_files[0:200]:
         shutil.copy(img_f, attachments_image_dir)
-        attachments['images'].append(osp.join(attachments_image_dir, osp.basename(img_f)))
+        attachments['images'].append(osp.join('attachments/images', osp.basename(img_f)))
 
-    attachments_config_dir = 'attachments/configs'
+    attachments_config_dir = osp.join(models_dir, 'attachments/configs')
     os.makedirs(attachments_config_dir, exist_ok=True)
     for config_f in ['preconfig.json', 'postconfig.json']:
         with open(config_f, 'r') as fp:
             quant_config = json.load(fp)
 
         if config_f == 'preconfig.json':
-            quant_config['inputs']['dims'] = [1, 3, img_size, img_size]
+            quant_config['inputs'][0]['dims'] = [1, 3, img_size, img_size]
         else:
             from models.experimental import attempt_load  # scoped to avoid circular import
             quant_model = attempt_load(f'{models_dir}/best.pt', map_location='cpu')
@@ -145,7 +145,8 @@ def _run_training(cfg: edict) -> None:
         with open(out_config_f, 'w') as fw:
             json.dump(quant_config, fw)
 
-        attachments['configs'].append(out_config_f)
+        # save to yaml with relative path to mdoels_dir
+        attachments['configs'].append(osp.join('attachments/configs', config_f))
 
     write_ymir_training_result(cfg, map50=0, files=[], id='last', attachments=attachments)
     # if task done, write 100% percent log
@@ -216,7 +217,7 @@ def _run_infer(cfg: edict, task_idx: int = 0, task_num: int = 1) -> None:
         subprocess.run(command.split(), check=True)
 
     monitor.write_monitor_logger(
-        percent=get_ymir_process(stage=YmirStage.PREPROCESS, p=1.0, task_idx=task_idx, task_num=task_num))
+        percent=get_ymir_process(stage=YmirStage.POSTPROCESS, p=1.0, task_idx=task_idx, task_num=task_num))
 
 
 if __name__ == '__main__':
