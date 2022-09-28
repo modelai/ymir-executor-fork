@@ -122,7 +122,7 @@ def _run_training(cfg: edict) -> None:
     os.makedirs(attachments_image_dir, exist_ok=True)
     for img_f in img_files[0:200]:
         shutil.copy(img_f, attachments_image_dir)
-        attachments['images'].append(osp.join('attachments/images', osp.basename(img_f)))
+        attachments['images'].append(osp.basename(img_f))
 
     attachments_config_dir = osp.join(models_dir, 'attachments/configs')
     os.makedirs(attachments_config_dir, exist_ok=True)
@@ -146,7 +146,7 @@ def _run_training(cfg: edict) -> None:
             json.dump(quant_config, fw)
 
         # save to yaml with relative path to mdoels_dir
-        attachments['configs'].append(osp.join('attachments/configs', config_f))
+        attachments['configs'].append(osp.basename(config_f))
 
     write_ymir_training_result(cfg, map50=0, files=[], id='last', attachments=attachments)
     # if task done, write 100% percent log
