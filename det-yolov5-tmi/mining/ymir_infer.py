@@ -12,12 +12,13 @@ import torch
 import torch.distributed as dist
 import torch.utils.data as td
 from easydict import EasyDict as edict
-from mining.util import YmirDataset, load_image_file
 from tqdm import tqdm
-from utils.general import scale_coords
-from utils.ymir_yolov5 import YmirYolov5
 from ymir_exc import result_writer as rw
 from ymir_exc.util import YmirStage, get_merged_config
+
+from mining.util import YmirDataset, load_image_file
+from utils.general import scale_coords
+from utils.ymir_yolov5 import YmirYolov5
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -65,7 +66,7 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
         with torch.no_grad():
             pred = ymir_yolov5.forward(batch['image'].float().to(device), nms=True)
 
-        if idx % monitor_gap == 0:
+        if idx % monitor_gap == 0 and RANK in [0, -1]:
             ymir_yolov5.write_monitor_logger(stage=YmirStage.TASK, p=idx * batch_size_per_gpu / dataset_size)
 
         preprocess_image_shape = batch['image'].shape[2:]

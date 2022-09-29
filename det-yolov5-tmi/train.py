@@ -39,6 +39,8 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
+from ymir_exc.util import YmirStage, get_merged_config, get_ymir_process, write_ymir_training_result
+
 import val  # for end-of-epoch mAP
 from models.experimental import attempt_load
 from models.yolo import Model
@@ -57,7 +59,7 @@ from utils.loss import ComputeLoss
 from utils.metrics import fitness
 from utils.plots import plot_evolve, plot_labels
 from utils.torch_utils import EarlyStopping, ModelEMA, de_parallel, select_device, torch_distributed_zero_first
-from ymir_exc.util import YmirStage, get_merged_config, get_ymir_process, write_ymir_training_result
+from utils.ymir_yolov5 import get_attachments
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -295,7 +297,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         model.train()
 
         # ymir monitor
-        if epoch % monitor_gap == 0:
+        if epoch % monitor_gap == 0 and RANK in [0, -1]:
             percent = get_ymir_process(stage=YmirStage.TASK, p=(epoch - start_epoch + 1) / (epochs - start_epoch + 1))
             monitor.write_monitor_logger(percent=percent)
 
@@ -400,7 +402,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             log_vals = list(mloss) + list(results) + lr
             callbacks.run('on_fit_epoch_end', log_vals, epoch, best_fitness, fi)
 
-            # Save model
+            # Save model, save best model, save final model
             if (not nosave) or (final_epoch and not evolve):  # if save
                 ckpt = {'epoch': epoch,
                         'best_fitness': best_fitness,
@@ -467,7 +469,12 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     torch.cuda.empty_cache()
     # save the best and last weight file with other files in models_dir
     if RANK in [-1, 0]:
-        write_ymir_training_result(ymir_cfg, map50=best_fitness, id='best', files=['best.onnx'])
+        attachments = get_attachments(ymir_cfg)
+        write_ymir_training_result(ymir_cfg,
+                                   map50=best_fitness,
+                                   id='best',
+                                   files=['/out/models/best.onnx'],
+                                   attachments=attachments)
     return results
 
 
