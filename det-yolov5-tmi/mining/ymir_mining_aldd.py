@@ -138,6 +138,7 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
     with open(ymir_cfg.ymir.input.candidate_index_file, 'r') as f:
         images = [line.strip() for line in f.readlines()]
 
+    max_barrier_times = len(images) // WORLD_SIZE // batch_size_per_gpu
     # origin dataset
     if RANK != -1:
         images_rank = images[RANK::WORLD_SIZE]
@@ -158,7 +159,7 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
     miner = ALDD(ymir_cfg)
     for idx, batch in enumerate(pbar):
         # batch-level sync, avoid 30min time-out error
-        if LOCAL_RANK != -1:
+        if LOCAL_RANK != -1 and idx < max_barrier_times:
             dist.barrier()
 
         with torch.no_grad():

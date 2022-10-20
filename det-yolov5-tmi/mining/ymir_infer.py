@@ -12,13 +12,12 @@ import torch
 import torch.distributed as dist
 import torch.utils.data as td
 from easydict import EasyDict as edict
-from tqdm import tqdm
-from ymir_exc import result_writer as rw
-from ymir_exc.util import YmirStage, get_merged_config
-
 from mining.util import YmirDataset, load_image_file
+from tqdm import tqdm
 from utils.general import scale_coords
 from utils.ymir_yolov5 import YmirYolov5
+from ymir_exc import result_writer as rw
+from ymir_exc.util import YmirStage, get_merged_config
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -44,6 +43,7 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
         images = [line.strip() for line in f.readlines()]
 
     # origin dataset
+    max_barrier_times = len(images) // WORLD_SIZE // batch_size_per_gpu
     images_rank = images[RANK::WORLD_SIZE]
     origin_dataset = YmirDataset(images_rank, load_fn=load_fn)
     origin_dataset_loader = td.DataLoader(origin_dataset,
@@ -60,7 +60,7 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
     pbar = tqdm(origin_dataset_loader) if RANK == 0 else origin_dataset_loader
     for idx, batch in enumerate(pbar):
         # batch-level sync, avoid 30min time-out error
-        if LOCAL_RANK != -1:
+        if LOCAL_RANK != -1 and idx < max_barrier_times:
             dist.barrier()
 
         with torch.no_grad():
@@ -95,7 +95,8 @@ def main() -> int:
     run(ymir_cfg, ymir_yolov5)
 
     # wait all process to save the infer result
-    dist.barrier()
+    if WORLD_SIZE > 1:
+        dist.barrier()
 
     if RANK in [0, -1]:
         results = []
