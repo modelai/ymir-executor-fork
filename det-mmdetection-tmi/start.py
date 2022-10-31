@@ -37,7 +37,7 @@ def _run_training() -> None:
 def _run_mining(cfg: edict) -> None:
     gpu_id: str = str(cfg.param.get('gpu_id', '0'))
     gpu_count = len(gpu_id.split(','))
-    mining_algorithm: str = cfg.param.get('mining_algorithm', 'aldd')
+    mining_algorithm: str = cfg.param.get('mining_algorithm', 'aldd','entropy')
 
     supported_mining_algorithm = ['cald', 'aldd', 'random']
     assert mining_algorithm in supported_mining_algorithm, f'unknown mining_algorithm {mining_algorithm}, not in {supported_mining_algorithm}'
