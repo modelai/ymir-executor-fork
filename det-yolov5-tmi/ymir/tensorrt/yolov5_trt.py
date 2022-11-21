@@ -222,25 +222,8 @@ class YoLov5TRT(object):
         image_raw = raw_bgr_image
         h, w, c = image_raw.shape
         image = cv2.cvtColor(image_raw, cv2.COLOR_BGR2RGB)
-        # Calculate widht and height and paddings
-        r_w = self.input_w / w
-        r_h = self.input_h / h
-        if r_h > r_w:
-            tw = self.input_w
-            th = int(r_w * h)
-            tx1 = tx2 = 0
-            ty1 = int((self.input_h - th) / 2)
-            ty2 = self.input_h - th - ty1
-        else:
-            tw = int(r_h * w)
-            th = self.input_h
-            tx1 = int((self.input_w - tw) / 2)
-            tx2 = self.input_w - tw - tx1
-            ty1 = ty2 = 0
         # Resize the image with long side while maintaining ratio
-        image = cv2.resize(image, (tw, th))
-        # Pad the short side with (128,128,128)
-        image = cv2.copyMakeBorder(image, ty1, ty2, tx1, tx2, cv2.BORDER_CONSTANT, None, (128, 128, 128))
+        image = cv2.resize(image, (self.input_w, self.input_h))
         image = image.astype(np.float32)
         # Normalize to [0,1]
         image /= 255.0
@@ -265,19 +248,12 @@ class YoLov5TRT(object):
         y = np.zeros_like(x)
         r_w = self.input_w / origin_w
         r_h = self.input_h / origin_h
-        if r_h > r_w:
-            y[:, 0] = x[:, 0] - x[:, 2] / 2
-            y[:, 2] = x[:, 0] + x[:, 2] / 2
-            y[:, 1] = x[:, 1] - x[:, 3] / 2 - (self.input_h - r_w * origin_h) / 2
-            y[:, 3] = x[:, 1] + x[:, 3] / 2 - (self.input_h - r_w * origin_h) / 2
-            y /= r_w
-        else:
-            y[:, 0] = x[:, 0] - x[:, 2] / 2 - (self.input_w - r_h * origin_w) / 2
-            y[:, 2] = x[:, 0] + x[:, 2] / 2 - (self.input_w - r_h * origin_w) / 2
-            y[:, 1] = x[:, 1] - x[:, 3] / 2
-            y[:, 3] = x[:, 1] + x[:, 3] / 2
-            y /= r_h
 
+        ## preprocess use resize only
+        y[:, 0] = (x[:, 0] - x[:, 2] / 2) / r_w
+        y[:, 2] = (x[:, 0] + x[:, 2] / 2) / r_w
+        y[:, 1] = (x[:, 1] - x[:, 3] / 2) / r_h
+        y[:, 3] = (x[:, 1] + x[:, 3] / 2) / r_h
         return y
 
     def post_process(self, output, origin_h, origin_w, conf_thresh, iou_thresh):
