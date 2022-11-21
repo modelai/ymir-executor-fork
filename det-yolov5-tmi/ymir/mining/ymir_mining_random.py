@@ -40,7 +40,10 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
     pbar = tqdm(images_rank) if RANK == 0 else images_rank
     for idx, image in enumerate(pbar):
         if RANK in [-1, 0]:
-            write_ymir_monitor_process(ymir_cfg, task='mining', naive_stage_percent=idx / dataset_size, stage=YmirStage.TASK)
+            write_ymir_monitor_process(ymir_cfg,
+                                       task='mining',
+                                       naive_stage_percent=idx / dataset_size,
+                                       stage=YmirStage.TASK)
         mining_results[image] = random.random()
 
     torch.save(mining_results, f'/out/mining_results_{max(0,RANK)}.pt')

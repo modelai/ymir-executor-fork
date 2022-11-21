@@ -70,7 +70,10 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
             pred = ymir_yolov5.forward(batch['image'].float().to(device), nms=False)
 
         if RANK in [-1, 0]:
-            write_ymir_monitor_process(ymir_cfg, task='mining', naive_stage_percent=idx * batch_size_per_gpu / dataset_size, stage=YmirStage.TASK)
+            write_ymir_monitor_process(ymir_cfg,
+                                       task='mining',
+                                       naive_stage_percent=idx * batch_size_per_gpu / dataset_size,
+                                       stage=YmirStage.TASK)
         for inner_idx, det in enumerate(pred):  # per image
             image_file = batch['image_file'][inner_idx]
             if len(det):
