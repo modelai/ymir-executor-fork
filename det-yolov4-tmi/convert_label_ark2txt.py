@@ -1,6 +1,6 @@
 import os
+import imagesize
 
-import cv2
 
 
 def _annotation_path_for_image(image_path: str, annotations_dir: str) -> str:
@@ -30,10 +30,7 @@ def _convert_annotations(index_file_path: str, dst_annotations_dir: str) -> None
         # each_txtfile: annotation path
         each_imgpath, each_txtfile = each_img_anno_path.split()
 
-        img = cv2.imread(each_imgpath)
-        if img is None:
-            raise ValueError(f"can not read image: {each_imgpath}")
-        img_h, img_w, _ = img.shape
+        img_w, img_h = imagesize.get(each_imgpath)
 
         with open(each_txtfile, 'r') as f:
             txt_content = f.readlines()

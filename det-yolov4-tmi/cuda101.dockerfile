@@ -15,7 +15,7 @@ RUN wget https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_o
 RUN rm /usr/bin/python3
 RUN ln -s /usr/bin/python3.7 /usr/bin/python3
 RUN python3 get-pip.py
-RUN pip3 install -i ${PIP_SOURCE} mxnet-cu101==1.5.1 numpy opencv-python pyyaml watchdog tensorboardX six scipy tqdm
+RUN pip3 install -i ${PIP_SOURCE} mxnet-cu101==1.5.1 numpy opencv-python pyyaml watchdog tensorboardX six scipy tqdm imagesize
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y libopencv-dev
