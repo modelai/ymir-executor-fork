@@ -6,7 +6,7 @@ max_batches: 20000
 warmup_iterations: 1000
 batch: 64
 subdivisions: 64
-shm_size: '16G'
+shm_size: '128G'
 export_format: 'ark:raw'
 # class_names:
 # - cat

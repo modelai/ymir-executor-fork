@@ -7,7 +7,7 @@ import sys
 from easydict import EasyDict as edict
 from mmdet.utils.util_ymir import get_best_weight_file, write_ymir_training_result
 from ymir_exc import monitor
-from ymir_exc.util import YmirStage, find_free_port, get_merged_config, get_ymir_process
+from ymir_exc.util import YmirStage, find_free_port, get_merged_config, write_ymir_monitor_process
 
 
 def main(cfg: edict) -> int:
@@ -41,8 +41,7 @@ def main(cfg: edict) -> int:
         else:
             logging.warning('no weight file used for training!')
 
-    monitor.write_monitor_logger(
-        percent=get_ymir_process(YmirStage.PREPROCESS, p=0.2))
+    write_ymir_monitor_process(cfg, task='training', naive_stage_percent=0.2, stage=YmirStage.POSTPROCESS)
 
     work_dir = cfg.ymir.output.models_dir
     if num_gpus == 0:

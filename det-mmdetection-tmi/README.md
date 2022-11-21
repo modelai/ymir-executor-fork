@@ -7,10 +7,11 @@
 # build docker image
 
 ```
-docker build -t ymir-executor/mmdet:cuda102-tmi --build-arg SERVER_MODE=dev --build-arg YMIR=1.1.0 -f docker/Dockerfile.cuda102 .
+docker build -t ymir-executor/mmdet:cuda102-tmi --build-arg YMIR=1.1.0 -f docker/Dockerfile.cuda102 .
 
-docker build -t ymir-executor/mmdet:cuda111-tmi --build-arg SERVER_MODE=dev --build-arg YMIR=1.1.0 -f docker/Dockerfile.cuda111 .
+docker build -t ymir-executor/mmdet:cuda111-tmi --build-arg YMIR=1.1.0 -f docker/Dockerfile.cuda111 .
 ```
+
 
 # changelog
 - modify `mmdet/datasets/coco.py`, save the evaluation result to `os.environ.get('COCO_EVAL_TMP_FILE')` with json format
@@ -29,3 +30,5 @@ docker build -t ymir-executor/mmdet:cuda111-tmi --build-arg SERVER_MODE=dev --bu
 ---
 
 - 2022/09/06: set `find_unused_parameters = True`, fix DDP bug
+- 2022/10/18: add `random` and `aldd` mining algorithm. `aldd` algorithm support yolox only.
+- 2022/10/19: fix training class_number bug in `recursive_modify_attribute()`

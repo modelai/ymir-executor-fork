@@ -7,4 +7,4 @@ task_id: 'default-training-task'
 pretrained_model_params: []
 class_names: []
 export_format: 'ark:raw'
-shm_size: '32G'
+shm_size: '128G'

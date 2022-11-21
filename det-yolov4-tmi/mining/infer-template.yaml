@@ -14,7 +14,7 @@ write_result: True
 confidence_thresh: 0.1
 nms_thresh: 0.45
 max_boxes: 50
-# shm_size: '16G'
+shm_size: '128G'
 # gpu_id: ''
 # model_params_path: []
 # class_names:

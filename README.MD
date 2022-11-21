@@ -2,9 +2,17 @@
 
 - [ymir](https://github.com/IndustryEssentials/ymir)
 
+  - [bilibili: video tutorial](https://b23.tv/KS5b5oF)
+
 - [wiki](https://github.com/modelai/ymir-executor-fork/wiki)
 
-- [ymir executor](./official-docker-image.md)
+- [ymir executor](./docs/official-docker-image.md)
+
+  - [develop tutorial](./docs/README.MD) from zero to one, build you ymir-executor
+
+  - [user survey](https://www.wjx.cn/vm/eKFm2aq.aspx#) help ymir team to write document and develop, user feedback are collected on a continuous and long-term basis.
+
+- [ymir mining algorithm](./docs/mining-images-overview.md)
 
 ## overview
 
@@ -50,55 +58,13 @@ gpu: single GeForce GTX 1080 Ti
 
 ---
 
-# build ymir executor
-
-## det-yolov4-tmi
-
-- yolov4 training, mining and infer docker image, use `mxnet` and `darknet` framework
-
-  ```
-  cd det-yolov4-tmi
-  docker build -t ymir-executor/yolov4:cuda101-tmi -f cuda101.dockerfile .
-
-  docker build -t ymir-executor/yolov4:cuda112-tmi -f cuda112.dockerfile .
-  ```
-
-## det-yolov5-tmi
-
-- yolov5 training, mining and infer docker image, use `pytorch` framework
-
-```
-cd det-yolov5-tmi
-docker build -t ymir-executor/yolov5:cuda102-tmi -f cuda102.dockerfile .
-
-docker build -t ymir-executor/yolov5:cuda111-tmi -f cuda111.dockerfile .
-```
-
-## det-mmdetection-tmi
-
-```
-cd det-mmdetection-tmi
-docker build -t ymir-executor/mmdet:cu102-tmi -f docker/Dockerfile.cuda102 .
-
-docker build -t ymir-executor/mmdet:cu111-tmi -f docker/Dockerfile.cuda111 .
-```
-
-## how to custom ymir-executor
-
-- [custom ymir-executor](https://github.com/IndustryEssentials/ymir/blob/dev/dev_docs/ymir-dataset-zh-CN.md)
-
-- [ymir-executor-sdk](https://github.com/modelai/ymir-executor-sdk)
-
 ## how to import pretrained model weights
 
 - [import and finetune model](https://github.com/modelai/ymir-executor-fork/wiki/import-and-finetune-model)
 
-- ~~[import pretainted model weights](https://github.com/IndustryEssentials/ymir/blob/dev/dev_docs/import-extra-models.md)~~
-
+- [import pretainted model weights](https://github.com/IndustryEssentials/ymir/blob/master/dev_docs/import-extra-models.md)
 ## reference
 
-- [mining algorithm: CALD](https://github.com/we1pingyu/CALD/)
-- [mining algorithm: ALDD](https://gitlab.com/haghdam/deep_active_learning)
 - [yolov4](https://github.com/AlexeyAB/darknet)
 - [yolov5](https://github.com/ultralytics/yolov5)
 - [mmdetection](https://github.com/open-mmlab/mmdetection)

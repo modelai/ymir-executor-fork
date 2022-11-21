@@ -5,12 +5,12 @@ import glob
 import logging
 import os
 import os.path as osp
-from typing import Any, Iterable, List, Optional
+from typing import Any, Iterable, List, Optional, Union
 
 import mmcv
 import yaml
 from easydict import EasyDict as edict
-from mmcv import Config
+from mmcv import Config, ConfigDict
 from nptyping import NDArray, Shape, UInt8
 from packaging.version import Version
 from ymir_exc import result_writer as rw
@@ -27,7 +27,8 @@ def modify_mmcv_config(mmcv_cfg: Config, ymir_cfg: edict) -> None:
     - modify model output channel
     - modify epochs, checkpoint, tensorboard config
     """
-    def recursive_modify_attribute(mmcv_cfg: Config, attribute_key: str, attribute_value: Any):
+
+    def recursive_modify_attribute(mmcv_cfgdict: Union[Config, ConfigDict], attribute_key: str, attribute_value: Any):
         """
         recursive modify mmcv_cfg:
             1. mmcv_cfg.attribute_key to attribute_value
@@ -35,14 +36,15 @@ def modify_mmcv_config(mmcv_cfg: Config, ymir_cfg: edict) -> None:
             3. mmcv_cfg.xxx[i].attribute_key to attribute_value (i=0, 1, 2 ...)
             4. mmcv_cfg.xxx[i].xxx.xxx[j].attribute_key to attribute_value
         """
-        for key in mmcv_cfg:
+        for key in mmcv_cfgdict:
             if key == attribute_key:
-                mmcv_cfg[key] = attribute_value
-            elif isinstance(mmcv_cfg[key], Config):
-                recursive_modify_attribute(mmcv_cfg[key], attribute_key, attribute_value)
-            elif isinstance(mmcv_cfg[key], Iterable):
-                for cfg in mmcv_cfg[key]:
-                    if isinstance(cfg, Config):
+                mmcv_cfgdict[key] = attribute_value
+                logging.info(f'modify {mmcv_cfgdict}, {key} = {attribute_value}')
+            elif isinstance(mmcv_cfgdict[key], (Config, ConfigDict)):
+                recursive_modify_attribute(mmcv_cfgdict[key], attribute_key, attribute_value)
+            elif isinstance(mmcv_cfgdict[key], Iterable):
+                for cfg in mmcv_cfgdict[key]:
+                    if isinstance(cfg, (Config, ConfigDict)):
                         recursive_modify_attribute(cfg, attribute_key, attribute_value)
 
     # modify dataset config
@@ -236,7 +238,7 @@ def _write_latest_ymir_training_result(last: bool = False, key_score: Optional[f
         raise Exception(f'please set valid environment variable YMIR_MODELS_DIR, invalid directory {WORK_DIR}')
 
     # assert only one model config file in work_dir
-    result_files = [osp.basename(f) for f in glob.glob(osp.join(WORK_DIR, '*')) if osp.basename(f) != 'result.yaml']
+    result_files = [f for f in glob.glob(osp.join(WORK_DIR, '*')) if osp.basename(f) != 'result.yaml']
 
     if last:
         # save all output file
@@ -245,8 +247,11 @@ def _write_latest_ymir_training_result(last: bool = False, key_score: Optional[f
         if max_keep_checkpoints > 0:
             topk_checkpoints = get_topk_checkpoints(result_files, max_keep_checkpoints)
             result_files = [f for f in result_files if not f.endswith(('.pth', '.pt'))] + topk_checkpoints
+
+        result_files = [osp.basename(f) for f in result_files]
         rw.write_model_stage(files=result_files, mAP=float(map), stage_name='last')
     else:
+        result_files = [osp.basename(f) for f in result_files]
         # save newest weight file in format epoch_xxx.pth or iter_xxx.pth
         weight_files = [
             osp.join(WORK_DIR, f) for f in result_files if f.startswith(('iter_', 'epoch_')) and f.endswith('.pth')
@@ -285,12 +290,15 @@ def _write_ancient_ymir_training_result(key_score: Optional[float] = None):
     WORK_DIR = ymir_cfg.ymir.output.models_dir
 
     # assert only one model config file in work_dir
-    result_files = [osp.basename(f) for f in glob.glob(osp.join(WORK_DIR, '*')) if osp.basename(f) != 'result.yaml']
+    result_files = [f for f in glob.glob(osp.join(WORK_DIR, '*')) if osp.basename(f) != 'result.yaml']
 
     max_keep_checkpoints = int(ymir_cfg.param.get('max_keep_checkpoints', 1))
     if max_keep_checkpoints > 0:
         topk_checkpoints = get_topk_checkpoints(result_files, max_keep_checkpoints)
         result_files = [f for f in result_files if not f.endswith(('.pth', '.pt'))] + topk_checkpoints
+
+    # convert to basename
+    result_files = [osp.basename(f) for f in result_files]
 
     training_result_file = osp.join(WORK_DIR, 'result.yaml')
     if osp.exists(training_result_file):

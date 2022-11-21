@@ -28,7 +28,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC \
 # Install ymir-exc sdk and MMCV (no cu102/torch1.8.1, use torch1.8.0 instead)
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools \
     && pip install --no-cache-dir mmcv-full==${MMCV} -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html \
-    && pip install "git+https://github.com/modelai/ymir-executor-sdk.git@ymir1.0.0" \
+    && pip install "git+https://github.com/modelai/ymir-executor-sdk.git@ymir1.3.0" \
     && conda clean --all
 
 # Install det-mmdetection-tmi

@@ -1,3 +1,5 @@
-shm_size: '32G'
+shm_size: '128G'
 export_format: 'ark:raw'
 cfg_options: ''
+mining_algorithm: cald
+class_distribution_scores: '' # 1.0,1.0,0.1,0.2

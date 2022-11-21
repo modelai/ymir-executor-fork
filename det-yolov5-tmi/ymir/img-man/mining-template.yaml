@@ -1,0 +1,18 @@
+# mining template for your executor app
+# after build image, it should at /img-man/mining-template.yaml
+# key: gpu_id, task_id, model_params_path, class_names should be preserved
+
+# gpu_id: '0'
+# task_id: 'default-training-task'
+# model_params_path: []
+# class_names: []
+
+img_size: 640
+mining_algorithm: aldd
+class_distribution_scores: '' # 1.0,1.0,0.1,0.2
+conf_thres: 0.25
+iou_thres: 0.45
+batch_size_per_gpu: 16
+num_workers_per_gpu: 4
+pin_memory: False
+shm_size: 128G

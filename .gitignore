@@ -27,3 +27,4 @@ yolov4_training/yolov4.conv.137
 yolov4_training/build_docker.sh
 yolov4_training/dockerfile_tmp
 yolov4_training/yolov4.conv.137
+det-demo-tmi/voc_dog

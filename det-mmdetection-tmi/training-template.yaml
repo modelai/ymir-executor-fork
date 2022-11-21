@@ -1,12 +1,12 @@
-shm_size: '32G'
+shm_size: '128G'
 export_format: 'ark:raw'
-samples_per_gpu: 16
-workers_per_gpu: 8
-max_epochs: 300
+samples_per_gpu: 16  # batch size per gpu
+workers_per_gpu: 4
+max_epochs: 100
 config_file: 'configs/yolox/yolox_tiny_8x8_300e_coco.py'
 args_options: ''
 cfg_options: ''
 metric: 'bbox'
-val_interval: 1  # <0 means evaluation every interval 
+val_interval: 1  # <0 means evaluation every interval
 max_keep_checkpoints: 1  # <0 means save all weight file, 1 means save last and best weight files, k means save topk best weight files and topk epoch/step weigth files
-port: 12345
+ymir_saved_file_patterns: ''  # custom saved files, support python regular expression, use , to split multiple pattern

@@ -16,6 +16,7 @@ import argparse
 import math
 import os
 import random
+import subprocess
 import sys
 import time
 from copy import deepcopy
@@ -31,7 +32,6 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import SGD, Adam, AdamW, lr_scheduler
 from tqdm import tqdm
-from ymir_exc import monitor
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -57,8 +57,8 @@ from utils.loss import ComputeLoss
 from utils.metrics import fitness
 from utils.plots import plot_evolve, plot_labels
 from utils.torch_utils import EarlyStopping, ModelEMA, de_parallel, select_device, torch_distributed_zero_first
-from utils.ymir_yolov5 import get_attachments
-from ymir_exc.util import YmirStage, get_merged_config, get_ymir_process, write_ymir_training_result
+from ymir.ymir_yolov5 import get_attachments
+from ymir_exc.util import YmirStage, get_merged_config, write_ymir_monitor_process, write_ymir_training_result
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -318,8 +318,7 @@ def train(
 
         # ymir monitor
         if epoch % monitor_gap == 0 and RANK in [0, -1]:
-            percent = get_ymir_process(stage=YmirStage.TASK, p=(epoch - start_epoch + 1) / (epochs - start_epoch + 1))
-            monitor.write_monitor_logger(percent=percent)
+            write_ymir_monitor_process(ymir_cfg, task='training', naive_stage_percent=(epoch - start_epoch + 1) / (epochs - start_epoch + 1), stage=YmirStage.TASK)
 
         # Update image weights (optional, single-GPU only)
         if opt.image_weights:
@@ -423,7 +422,7 @@ def train(
             callbacks.run('on_fit_epoch_end', log_vals, epoch, best_fitness, fi)
 
             # Save model, save best model, save final model
-            if (not nosave) or (final_epoch and not evolve):  # if save
+            if (not nosave) or (best_fitness == fi) or (final_epoch and not evolve):  # if save
                 ckpt = {
                     'epoch': epoch,
                     'best_fitness': best_fitness,
@@ -439,7 +438,8 @@ def train(
                 torch.save(ckpt, last)
                 if best_fitness == fi:
                     torch.save(ckpt, best)
-                if (epoch > 0) and (opt.save_period > 0) and (epoch % opt.save_period == 0):
+                    write_ymir_training_result(ymir_cfg, map50=best_fitness, id='yolov5_best', files=[str(best)])
+                if (not nosave) and (epoch > 0) and (opt.save_period > 0) and (epoch % opt.save_period == 0):
                     torch.save(ckpt, w / f'epoch{epoch}.pt')
                     weight_file = str(w / f'epoch{epoch}.pt')
                     write_ymir_training_result(ymir_cfg, map50=results[2], id=f'epoch_{epoch}', files=[weight_file])
@@ -488,6 +488,22 @@ def train(
 
         callbacks.run('on_train_end', last, best, plots, epoch, results)
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
+
+        opset = ymir_cfg.param.opset
+        onnx_file: Path = best.with_suffix('.onnx')
+        command = f'python3 export.py --weights {best} --opset {opset} --include onnx'
+        LOGGER.info(f'export onnx weight: {command}')
+        subprocess.run(command.split(), check=True)
+
+        if nosave:
+            # save best.pt and best.onnx
+            write_ymir_training_result(ymir_cfg,
+                                       map50=best_fitness,
+                                       id='yolov5_best',
+                                       files=[str(best), str(onnx_file)])
+        else:
+            # set files = [] to save all files in /out/models
+            write_ymir_training_result(ymir_cfg, map50=best_fitness, id='yolov5_best', files=[])
 
     torch.cuda.empty_cache()
     # save the best and last weight file with other files in models_dir

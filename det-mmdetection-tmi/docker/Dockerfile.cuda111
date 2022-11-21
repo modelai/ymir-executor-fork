@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y build-essential ffmpeg libsm6 libxext6 
 # Install ymir-exc sdk and MMCV
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools \
     && pip install --no-cache-dir mmcv-full==${MMCV} -f https://download.openmmlab.com/mmcv/dist/cu111/torch1.8.0/index.html \
-    && pip install "git+https://github.com/modelai/ymir-executor-sdk.git@ymir1.0.0" \
+    && pip install "git+https://github.com/modelai/ymir-executor-sdk.git@ymir1.3.0" \
     && conda clean --all
 
 # Install det-mmdetection-tmi

@@ -99,7 +99,6 @@ def main():
     args = parse_args()
     ymir_cfg = get_merged_config()
     cfg = Config.fromfile(args.config)
-    print(cfg)
     # modify mmdet config from file
     modify_mmcv_config(mmcv_cfg=cfg, ymir_cfg=ymir_cfg)
 

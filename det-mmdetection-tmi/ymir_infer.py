@@ -12,9 +12,9 @@ from mmdet.apis import inference_detector, init_detector
 from mmdet.utils.util_ymir import get_best_weight_file
 from tqdm import tqdm
 from ymir_exc import dataset_reader as dr
-from ymir_exc import env, monitor
+from ymir_exc import env
 from ymir_exc import result_writer as rw
-from ymir_exc.util import YmirStage, get_merged_config, get_ymir_process
+from ymir_exc.util import YmirStage, get_merged_config, write_ymir_monitor_process
 
 
 def parse_option(cfg_options: str) -> dict:
@@ -73,18 +73,6 @@ class YmirModel:
     def __init__(self, cfg: edict):
         self.cfg = cfg
 
-        if cfg.ymir.run_mining and cfg.ymir.run_infer:
-            # mining_task_idx = 0
-            infer_task_idx = 1
-            task_num = 2
-        else:
-            # mining_task_idx = 0
-            infer_task_idx = 0
-            task_num = 1
-
-        self.task_idx = infer_task_idx
-        self.task_num = task_num
-
         # Specify the path to model config and checkpoint file
         config_file = get_config_file(cfg)
         checkpoint_file = get_best_weight_file(cfg)
@@ -121,15 +109,10 @@ def main():
         idx += 1
 
         if idx % monitor_gap == 0:
-            percent = get_ymir_process(stage=YmirStage.TASK,
-                                       p=idx / N,
-                                       task_idx=model.task_idx,
-                                       task_num=model.task_num)
-            monitor.write_monitor_logger(percent=percent)
+            write_ymir_monitor_process(cfg, task='infer', naive_stage_percent=idx / N, stage = YmirStage.TASK)
 
     rw.write_infer_result(infer_result=infer_result)
-    percent = get_ymir_process(stage=YmirStage.POSTPROCESS, p=1, task_idx=model.task_idx, task_num=model.task_num)
-    monitor.write_monitor_logger(percent=percent)
+    write_ymir_monitor_process(cfg, task='infer', naive_stage_percent=1.0, stage=YmirStage.POSTPROCESS)
     return 0
 
 
