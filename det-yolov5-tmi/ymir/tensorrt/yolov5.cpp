@@ -8,7 +8,7 @@
 #include "calibrator.h"
 #include "preprocess.h"
 
-#define USE_FP16  // set USE_INT8 or USE_FP16 or USE_FP32
+#define USE_INT8  // set USE_INT8 or USE_FP16 or USE_FP32
 #define DEVICE 0  // GPU id
 #define NMS_THRESH 0.6
 #define CONF_THRESH 0.1

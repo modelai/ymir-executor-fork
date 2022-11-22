@@ -15,15 +15,32 @@ import pycuda.driver as cuda
 import tensorrt as trt
 
 
-def get_img_path_batches(batch_size, img_dir):
+def get_img_path_batches(batch_size, img_dir_or_index_file):
     ret = []
     batch = []
-    for root, dirs, files in os.walk(img_dir):
-        for name in files:
+
+    if os.path.isfile(img_dir_or_index_file):
+        # ymir index file
+        with open(img_dir_or_index_file, 'r') as fp:
+            lines = fp.readlines()
+
+        for line in lines:
+            img_path = line.strip().split()[0]
             if len(batch) == batch_size:
                 ret.append(batch)
                 batch = []
-            batch.append(os.path.join(root, name))
+            batch.append(img_path)
+
+    elif os.path.isdir(img_dir_or_index_file):
+        for root, dirs, files in os.walk(img_dir_or_index_file):
+            for name in files:
+                if len(batch) == batch_size:
+                    ret.append(batch)
+                    batch = []
+                batch.append(os.path.join(root, name))
+    else:
+        raise Exception(f'unknown format {img_dir_or_index_file}')
+
     if len(batch) > 0:
         ret.append(batch)
     return ret
@@ -355,7 +372,7 @@ class YoLov5TRT(object):
         return boxes
 
 
-class inferThread(threading.Thread):
+class InferThread(threading.Thread):
 
     def __init__(self, yolov5_wrapper, image_path_batch):
         threading.Thread.__init__(self)
@@ -372,7 +389,7 @@ class inferThread(threading.Thread):
         print('input->{}, time->{:.2f}ms, saving into output/'.format(self.image_path_batch, use_time * 1000))
 
 
-class warmUpThread(threading.Thread):
+class WarmUpThread(threading.Thread):
 
     def __init__(self, yolov5_wrapper):
         threading.Thread.__init__(self)
@@ -421,14 +438,14 @@ if __name__ == "__main__":
 
         for i in range(10):
             # create a new thread to do warm_up
-            thread1 = warmUpThread(yolov5_wrapper)
+            thread1 = WarmUpThread(yolov5_wrapper)
             thread1.start()
             thread1.join()
         for batch in image_path_batches:
             # create a new thread to do inference
-            thread1 = inferThread(yolov5_wrapper, batch)
-            thread1.start()
-            thread1.join()
+            thread2 = InferThread(yolov5_wrapper, batch)
+            thread2.start()
+            thread2.join()
     finally:
         # destroy the instance
         yolov5_wrapper.destroy()

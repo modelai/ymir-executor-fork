@@ -6,6 +6,7 @@ import os
 import os.path as osp
 import shutil
 from typing import Any, Dict, List
+import random
 
 import numpy as np
 import torch
@@ -182,6 +183,8 @@ def get_attachments(cfg: edict) -> Dict[str, List[str]]:
     with open(cfg.ymir.input.val_index_file, 'r') as fp:
         img_files = [line.split()[0] for line in fp.readlines()]
 
+    random.seed(25)
+    random.shuffle(img_files)
     models_dir: str = cfg.ymir.output.models_dir
     img_size: int = int(cfg.param.img_size)
     attachments_image_dir = osp.join(models_dir, 'attachments/images')

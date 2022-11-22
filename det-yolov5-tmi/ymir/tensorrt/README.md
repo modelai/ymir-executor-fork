@@ -4,6 +4,10 @@ The Pytorch implementation is [ultralytics/yolov5](https://github.com/ultralytic
 
 - code from [tensorrtx](https://github.com/wang-xinyu/tensorrtx)
 
+## ymir changelog
+- 2022/11/21: test tensorrt int8 quantization with custom validation function
+- 2022/11/21: modify preprocess and postprocess from letterbox to simple resize
+
 ## Different versions of yolov5
 
 Currently, we support yolov5 v1.0, v2.0, v3.0, v3.1, v4.0, v5.0, v6.0, v6.2.

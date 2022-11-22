@@ -7,7 +7,8 @@ from pathlib import Path
 from pprint import pprint
 from tqdm import tqdm
 import numpy as np
-from yolov5_trt import YoLov5TRT, warmUpThread, get_img_path_batches
+import yaml
+from yolov5_trt import YoLov5TRT, WarmUpThread, get_img_path_batches
 from object_detection_metrics.utils import converter
 from object_detection_metrics.evaluators import coco_evaluator, pascal_voc_evaluator
 from object_detection_metrics.utils.enumerators import (BBFormat, BBType, CoordinatesType, MethodAveragePrecision)
@@ -64,7 +65,6 @@ def convert_model(weight_file, engine_file, model, calibration_path, yolov5_path
     wts_file = str(Path(weight_file).with_suffix('.wts'))
     os.system(f'cd {yolov5_path} && python ymir/tensorrt/gen_wts.py -w {weight_file} -o {wts_file}')
     if os.path.isdir('build/coco_calib'):
-        # shutil.rmtree('build/coco_calib')
         os.unlink('build/coco_calib')
     os.system(f'cd build && ln -s {calibration_path} coco_calib')
     os.system(f'cd build && ./yolov5 -s {wts_file} {engine_file} {model}')
@@ -90,7 +90,7 @@ def check_engine(engine_file_path, image_dir, result_dir='tmp_output', conf_thre
 
         for i in range(10):
             # create a new thread to do warm_up
-            thread1 = warmUpThread(yolov5_wrapper)
+            thread1 = WarmUpThread(yolov5_wrapper)
             thread1.start()
             thread1.join()
 
@@ -107,48 +107,86 @@ def check_engine(engine_file_path, image_dir, result_dir='tmp_output', conf_thre
         yolov5_wrapper.destroy()
 
 
-def calculate_metrics(gt_dir, result_dir, image_dir):
+def calculate_metrics(ymir_index_file, trt_result_dir, pt_result_dir):
     """
     param:
-        gt_dir: ground truth labels files root directory, support multiple level
-        result_dir: result labels files root directory, support multiple level
-        image_dir: origin image files root directory, support multilpe level
+        ymir_index_file: ymir index file
+        trt_result_dir: tensorrt result labels files root directory, support multiple level
+        pt_result_dir: yolov5 result files root directory, support multilpe level
     """
-    gt_bbs = converter.text2bb(
-        gt_dir,
-        bb_type=BBType.GROUND_TRUTH,
-        bb_format=BBFormat.YOLO,  # xcycwh
-        type_coordinates=CoordinatesType.RELATIVE,
-        img_dir=image_dir)
+    assert os.path.isfile(ymir_index_file), f'{ymir_index_file} is not ymir index file'
 
-    det_bbs = converter.text2bb(result_dir,
+    with open(ymir_index_file) as fp:
+        lines = fp.readlines()
+
+    img_files = []
+    img_to_ann = {}
+    for line in lines:
+        img_f, ann_f = line.split()
+        img_files.append(img_f)
+
+        result_f = os.path.join(pt_result_dir, os.path.basename(ann_f))
+        if os.path.exists(result_f):
+            img_to_ann[img_f] = result_f
+
+    # ymir index file: class_id xyxy
+    gt_bbs = converter.ymir2bb(ymir_index_file,
+                               bb_type=BBType.GROUND_TRUTH,
+                               bb_format=BBFormat.XYX2Y2,
+                               type_coordinates=CoordinatesType.ABSOLUTE)
+
+    # yolov5 tensorrt result
+    trt_bbs = converter.text2bb(trt_result_dir,
                                 bb_type=BBType.DETECTED,
                                 bb_format=BBFormat.XYX2Y2,
                                 type_coordinates=CoordinatesType.ABSOLUTE,
-                                img_dir=image_dir)
+                                img_dir=None)
+
+    # yolov5 pytorch model result
+    pt_bbs = converter.dict2bb(img_to_ann=img_to_ann,
+                               bb_type=BBType.DETECTED,
+                               bb_format=BBFormat.YOLO,
+                               type_coordinates=CoordinatesType.RELATIVE)
 
     #############################################################
     # EVALUATE WITH COCO METRICS
     #############################################################
-    coco_res1 = coco_evaluator.get_coco_summary(gt_bbs, det_bbs)
+    coco_trt = coco_evaluator.get_coco_summary(gt_bbs, trt_bbs)
     # coco_res2 = coco_evaluator.get_coco_metrics(gt_bbs, det_bbs)
+    coco_pt = coco_evaluator.get_coco_summary(gt_bbs, pt_bbs)
 
     print('coco result \n')
-    pprint(coco_res1)
+    pprint(coco_trt)
+    pprint(coco_pt)
     # pprint(coco_res2)
     #############################################################
     # EVALUATE WITH VOC PASCAL METRICS
     #############################################################
-    ious = [0.5, 0.75]
+    voc_trt = pascal_voc_evaluator.get_pascalvoc_metrics(gt_bbs,
+                                                         trt_bbs,
+                                                         iou_threshold=0.5,
+                                                         generate_table=False,
+                                                         method=MethodAveragePrecision.ELEVEN_POINT_INTERPOLATION)
 
-    for iou in ious:
-        dict_res = pascal_voc_evaluator.get_pascalvoc_metrics(gt_bbs,
-                                                              det_bbs,
-                                                              iou,
-                                                              generate_table=True,
-                                                              method=MethodAveragePrecision.ELEVEN_POINT_INTERPOLATION)
-        print(f'voc result, iou = {iou} \n')
-        pprint(dict_res['mAP'])
+    voc_pt = pascal_voc_evaluator.get_pascalvoc_metrics(gt_bbs,
+                                                        pt_bbs,
+                                                        iou_threshold=0.5,
+                                                        generate_table=False,
+                                                        method=MethodAveragePrecision.ELEVEN_POINT_INTERPOLATION)
+    print('tensorrt result: ', voc_trt['mAP'])
+    print('yolov5 pytorch result: ', voc_pt['mAP'])
+
+    result_file = '/out/models/result.yaml'
+
+    with open(result_file, 'r') as fr:
+        result = yaml.safe_load(fr)
+
+    assert isinstance(result, dict), f'result {result} is not dict'
+    result['voc_mAP_int8']: float = float(round(voc_trt['mAP'], ndigits=4))
+    result['voc_mAP_fp32']: float = float(round(voc_pt['mAP'], ndigits=4))
+
+    with open(result_file, 'w') as fw:
+        yaml.safe_dump(result, fw)
 
 
 def get_args():
@@ -158,8 +196,8 @@ def get_args():
     parser.add_argument('--calibration_path', type=str, required=True, help='random select 1000 images for calibration')
     parser.add_argument('--weight_file', type=str, required=True, help='weight file')
     parser.add_argument('--model', choices=['n', 's', 'm', 'l', 'x'], help='the yolov5 model', required=True)
-    parser.add_argument('--eval_image_path', type=str, required=True, help='images for eval')
-    parser.add_argument('--gt_txt_dir', type=str, help='groundtruth txt file path')
+    parser.add_argument('--ymir_eval_index_file', type=str, help='ymir validation index file')
+    parser.add_argument('--pt_result_dir', type=str, help='the yolov5 validation output directory')
     parser.add_argument('--yolov5_path', type=str, default='/app', help='the ultralytics yolov5 source code path')
     parser.add_argument('--conf_thresh', type=float, default=0.001)
     parser.add_argument('--iou_thresh', type=float, default=0.6)
@@ -173,14 +211,17 @@ def main():
     engine_file = str(Path(args.weight_file).with_suffix('.engine'))
     convert_model(args.weight_file, engine_file, args.model, args.calibration_path, args.yolov5_path)
 
-    result_dir = 'tmp_output'
+    trt_result_dir = 'trt_result'
     check_engine(engine_file,
-               args.eval_image_path,
-               result_dir=result_dir,
-               conf_thresh=args.conf_thresh,
-               iou_thresh=args.iou_thresh)
+                 args.ymir_eval_index_file,
+                 result_dir=trt_result_dir,
+                 conf_thresh=args.conf_thresh,
+                 iou_thresh=args.iou_thresh)
 
-    calculate_metrics(gt_dir=args.gt_txt_dir, result_dir=result_dir, image_dir=args.eval_image_path)
+    pt_result_dir = 'pt_result/labels'
+    calculate_metrics(ymir_index_file=args.ymir_eval_index_file,
+                      trt_result_dir=trt_result_dir,
+                      pt_result_dir=pt_result_dir)
 
 
 if __name__ == '__main__':
