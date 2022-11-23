@@ -180,13 +180,22 @@ def calculate_metrics(ymir_index_file, trt_result_dir, pt_result_dir):
 
     with open(result_file, 'r') as fr:
         result = yaml.safe_load(fr)
-
     assert isinstance(result, dict), f'result {result} is not dict'
-    result['voc_mAP_int8']: float = float(round(voc_trt['mAP'], ndigits=4))
-    result['voc_mAP_fp32']: float = float(round(voc_pt['mAP'], ndigits=4))
 
-    with open(result_file, 'w') as fw:
-        yaml.safe_dump(result, fw)
+    eval_file = '/out/models/ymir_eval.yaml'
+    eval_result = {}
+    eval_result['voc_mAP_int8']: float = float(round(voc_trt['mAP'], ndigits=4))
+    eval_result['voc_mAP_fp32']: float = float(round(voc_pt['mAP'], ndigits=4))
+
+    with open(eval_file, 'w') as fw:
+        yaml.safe_dump(eval_result, fw)
+
+    # add eval_file to model stages
+    for stage in result['model_stages']:
+        result['model_stages'][stage]['files'].append(os.path.basename(eval_file))
+
+    with open(result_file, 'w') as f:
+        yaml.safe_dump(result, f)
 
 
 def get_args():
