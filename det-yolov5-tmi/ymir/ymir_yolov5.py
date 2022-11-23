@@ -51,9 +51,9 @@ class YmirYolov5(torch.nn.Module):
         super().__init__()
         self.cfg = cfg
 
-        self.gpu_id: str = str(cfg.param.get('gpu_id', '0'))
-        device = select_device(self.gpu_id)  # will set CUDA_VISIBLE_DEVICES=self.gpu_id
-        self.gpu_count: int = len(self.gpu_id.split(',')) if self.gpu_id else 0
+        self.gpu_index: str = str(cfg.param.get('gpu_index', '0'))
+        device = select_device(self.gpu_index)  # will set CUDA_VISIBLE_DEVICES=self.gpu_index
+        self.gpu_count: int = len(self.gpu_index.split(',')) if self.gpu_index else 0
         self.batch_size_per_gpu: int = int(cfg.param.get('batch_size_per_gpu', 4))
         self.num_workers_per_gpu: int = int(cfg.param.get('num_workers_per_gpu', 4))
         self.pin_memory: bool = get_bool(cfg, 'pin_memory', False)
