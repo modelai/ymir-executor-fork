@@ -1,8 +1,8 @@
 # training template for your executor app
 # after build image, it should at /img-man/training-template.yaml
-# key: gpu_id, task_id, pretrained_model_params, class_names should be preserved
+# key: gpu_index, task_id, pretrained_model_params, class_names should be preserved
 
-# gpu_id: '0'
+# gpu_index: '0'
 # task_id: 'default-training-task'
 # pretrained_model_params: []
 # class_names: []
@@ -20,3 +20,4 @@ args_options: '--exist-ok'
 save_period: -1
 sync_bn: False # work for multi-gpu only
 save_best_only: True  # save the best weight file only
+gpu_index: '0,1,2,3'

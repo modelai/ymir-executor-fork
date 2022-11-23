@@ -17,8 +17,8 @@ docker build -t your/ymir-executor:ymir2.0.0-yolov5-cpu-tmi -f cpu.dockerfile .
 
 ### 训练参数说明
 
-- 一些参数由ymir后台生成，如 `gpu_id`, `class_names` 等参数
-  - `gpu_id`:
+- 一些参数由ymir后台生成，如 `gpu_index`, `class_names` 等参数
+  - `gpu_index`:
   - `task_id`:
   - `model_params_path`:
   - `class_names`:
