@@ -9,13 +9,38 @@ ymir use tensorrt to check int8 quantization
 import os.path as osp
 import sys
 from ymir_exc.util import get_merged_config
+from ymir.ymir_yolov5 import get_attachments
+from ymir_exc.util import write_ymir_training_result
+from ymir_exc import monitor
 import subprocess
 import shutil
+from easydict import EasyDict as edict
+import os
+
+
+def generate_fake_result_file(ymir_cfg: edict, fake_map=0.9):
+    """
+    just for convert, not run training
+    """
+    attachments = get_attachments(ymir_cfg)
+
+    os.makedirs('/out/models', exist_ok=True)
+    shutil.copy('/in/models/best.onnx', '/out/models/best.onnx')
+    shutil.copy('/in/models/best.pt', '/out/models/best.pt')
+    write_ymir_training_result(ymir_cfg,
+                               map50=fake_map,
+                               id='best',
+                               files=['/out/models/best.onnx', '/out/models/best.pt'],
+                               attachments=attachments)
 
 
 def main() -> int:
     cfg = get_merged_config()
     model = cfg.param.model
+
+    result_file = cfg.ymir.output.training_result_file
+    if not osp.exists(result_file):
+        generate_fake_result_file(cfg)
 
     # yolov5n/s/m/l/x --> n/s/m/l/x
     short_model = model[6:]
@@ -63,6 +88,8 @@ def main() -> int:
 
     print(f'run commands: {trt_cmd}')
     subprocess.run(trt_cmd, check=True, cwd='ymir/tensorrt')
+
+    monitor.write_monitor_logger(percent=1.0)
     return 0
 
 
