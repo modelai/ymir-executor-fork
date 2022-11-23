@@ -6,16 +6,17 @@ ymir use tensorrt to check int8 quantization
 3. parse val_index_file to obtain full ymir-format(class_id xyxy int absolute) annotation files
 4. compute the map for coco and voc and write to result.yaml
 """
-import os.path as osp
-import sys
-from ymir_exc.util import get_merged_config
-from ymir.ymir_yolov5 import get_attachments
-from ymir_exc.util import write_ymir_training_result
-from ymir_exc import monitor
-import subprocess
-import shutil
-from easydict import EasyDict as edict
 import os
+import os.path as osp
+import shutil
+import subprocess
+import sys
+
+from easydict import EasyDict as edict
+from ymir_exc import monitor
+from ymir_exc.util import get_merged_config, write_ymir_training_result
+
+from ymir.ymir_yolov5 import get_attachments
 
 
 def generate_fake_result_file(ymir_cfg: edict, fake_map=0.9):
@@ -36,6 +37,9 @@ def generate_fake_result_file(ymir_cfg: edict, fake_map=0.9):
 
 def main() -> int:
     cfg = get_merged_config()
+    if not cfg.ymir.run_training:
+        return 0
+
     model = cfg.param.model
 
     result_file = cfg.ymir.output.training_result_file
