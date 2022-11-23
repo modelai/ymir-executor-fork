@@ -122,7 +122,7 @@ class ALDD(object):
 
 
 def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
-    # eg: gpu_id = 1,3,5,7  for LOCAL_RANK = 2, will use gpu 5.
+    # eg: gpu_index = 1,3,5,7  for LOCAL_RANK = 2, will use gpu 5.
     gpu = LOCAL_RANK if LOCAL_RANK >= 0 else 0
     device = torch.device('cuda', gpu)
     ymir_yolov5.to(device)
@@ -181,7 +181,7 @@ def run(ymir_cfg: edict, ymir_yolov5: YmirYolov5):
 
 def main() -> int:
     ymir_cfg = get_merged_config()
-    # note select_device(gpu_id) will set os.environ['CUDA_VISIBLE_DEVICES'] to gpu_id
+    # note select_device(gpu_index) will set os.environ['CUDA_VISIBLE_DEVICES'] to gpu_index
     ymir_yolov5 = YmirYolov5(ymir_cfg)
 
     if LOCAL_RANK != -1:
