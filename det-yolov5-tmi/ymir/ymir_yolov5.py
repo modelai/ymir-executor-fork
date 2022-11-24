@@ -4,9 +4,9 @@ utils function for ymir and yolov5
 import json
 import os
 import os.path as osp
+import random
 import shutil
 from typing import Any, Dict, List
-import random
 
 import numpy as np
 import torch

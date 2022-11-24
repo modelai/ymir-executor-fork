@@ -16,18 +16,31 @@ from easydict import EasyDict as edict
 from ymir_exc import monitor
 from ymir_exc.util import get_merged_config, write_ymir_training_result
 
-from ymir.ymir_yolov5 import get_attachments
+from ymir.ymir_yolov5 import convert_ymir_to_yolov5, get_attachments
 
 
 def generate_fake_result_file(ymir_cfg: edict, fake_map=0.9):
     """
     just for convert, not run training
+    1. copy weight file to /out/models
+    2. generate data.yaml to /out/data.yaml for yolov5 pytorch validation
+    3. generate fake /out/models/result.yaml
     """
-    attachments = get_attachments(ymir_cfg)
-
     os.makedirs('/out/models', exist_ok=True)
-    shutil.copy('/in/models/best.onnx', '/out/models/best.onnx')
-    shutil.copy('/in/models/best.pt', '/out/models/best.pt')
+    pretrain_files = ymir_cfg.param.pretrained_model_params
+    for best in ['best.onnx', 'best.pt']:
+        for f in pretrain_files:
+            if osp.basename(f) == best:
+                shutil.copy(f, f'/out/models/{best}')
+                break
+
+    # generate data.yaml for validation
+    out_dir = ymir_cfg.ymir.output.root_dir
+    convert_ymir_to_yolov5(ymir_cfg)
+    print(f'generate {out_dir}/data.yaml for validation')
+
+    # will load model to obtain anchors
+    attachments = get_attachments(ymir_cfg)
     write_ymir_training_result(ymir_cfg,
                                map50=fake_map,
                                id='best',
