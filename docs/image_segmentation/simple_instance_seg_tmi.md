@@ -36,3 +36,65 @@ annotation_info['confidence'] = min(1.0, 0.1 + random.random())
 coco_results = convert(cfg, results, True)
 rw.write_infer_result(infer_result=coco_results, algorithm='segmentation')
 ```
+
+- 结果文件格式
+
+    - 参考 [coco-formats](https://cocodataset.org/#format-results)
+
+    - 其中 RLE 为一种mask编码格式， 可通过pycocotools生成
+
+    - 其中 bbox 格式为 xywh
+```
+{
+    "categories": [{"id": int, "name": str, "supercategory": str}],
+    "images": [{"id": int, "file_name": str, "width": int, "height" int}],
+    "annotations": [{"id": int, "image_id": int, "category_id": int, "segmentation": RLE, "bbox": [x1, y1, w, h], "confidence": float}]
+}
+```
+
+- 结果文件示例
+```
+{
+    "categories":[
+        {
+            "id":1,
+            "name":"dog",
+            "supercategory":"none"
+        },
+        {
+            "id":2,
+            "name":"cat",
+            "supercategory":"none"
+        }
+    ],
+    "images":[
+        {
+            "id":1,
+            "file_name":"5ec2163001ed53f2169c525ff2e5e5ec.jpg",
+            "width":1280,
+            "height":854
+        }
+    ],
+    "annotations":[
+        {
+            "id":5,
+            "image_id":1,
+            "category_id":1,
+            "confidence":0.9,
+            "bbox":[
+                9,
+                851,
+                2,
+                3
+            ],
+            "segmentation":{
+                "size":[
+                    854,
+                    1280
+                ],
+                "counts":"iZ83cj00k_QQ1"
+            }
+        }
+    ]
+}
+```
